@@ -1,0 +1,226 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+   <meta charset="UTF-8">
+   <meta http-equiv="X-UA-Compatible" content="IE=edge">
+   <meta name="viewport" content="width=device-width, initial-scale=1.0">
+   <title>Scanner</title>
+</head>
+<body>
+   
+
+   <main>
+      <div class="container">
+      <input type="file" id="input-excel"><br><br>
+      
+      </div>
+      <div id="reader"></div>
+      <input type="text" id="input-name" placeholder="BARCODE NUMBER"><br><br>
+      <div class="button-container">
+      <button style="color:blue;" id="search-button">Scan Station</button>
+      <button style="color:blue;" id="product-search">Scan Component</button>
+      </div>
+      <button id="restart-button">Restart</button><br><br>
+      <div class="output">
+      <div id="output-details"></div>
+      </div>
+      <div class="output2">
+      <div id="output-details2"></div>
+      </div>
+      <div  style="color:green;"id="alert"></div>
+      <div  style="color:red;"id="alert1"></div>
+   </main>
+   
+   <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.17.0/xlsx.full.min.js"></script>
+   <script src="https://cdnjs.cloudflare.com/ajax/libs/html5-qrcode/2.3.4/html5-qrcode.min.js"></script>
+   <style>
+      main {
+         display: flex;
+         flex-direction: column;
+         align-items: center;
+      }
+      .button-container{
+        display:flex;
+        justify-content:center;
+        margin:20px;
+        margin-top: -20px;;
+      }
+      #alert{
+        display:flex;
+        justify-content:center;
+        font-size:1.5rem;
+      }
+      #alert1{
+        display:flex;
+        justify-content:center;
+        font-size:1.5rem;
+      }
+      .container{
+        display:flex;
+        justify-content:center;
+        margin:20px;
+      }
+      #product-search{
+        margin-left:10px;
+      }
+      #search-button{
+        margin-right:20px;
+      }
+      #input-name{
+        display:flex;
+        justify-content:center;
+        margin-top:20px;
+        text-align: center;
+
+      }
+      #restart-button{
+        display:flex;
+        justify-content:center;
+
+      }
+      #reader {
+         width:300px;
+         
+      }
+      #result {
+         text-align: center;
+         font-size: 1.5rem;
+      }
+      .output{
+        display:flex;
+        font-size:1.5rem;
+        }
+        .output2{
+        display:flex;
+        font-size:1.5rem;
+        }
+       
+       
+      
+      
+   </style>
+   <script>
+      const scanner = new Html5QrcodeScanner('reader', {
+         qrbox: {
+            width: 250,
+            height: 150,
+         },
+         fps: 30,
+      });
+      let firstDecodedBarcode = null; // Store the first decoded barcode here
+      let secondDecodedBarcode = null; // Store the second decoded barcode here
+      let scannedResult = null; // Store the scanned result here
+      
+      
+      
+      scanner.render(success, error);
+      function success(result) {
+         // Set the scanned result as the value of the name input field
+         document.getElementById('input-name').value = result;
+         scannedResult = result; // Store the scanned result
+        
+         // Store the first decoded barcode
+         if (!firstDecodedBarcode) {
+            firstDecodedBarcode = result;
+            
+         } else if (!secondDecodedBarcode) {
+            secondDecodedBarcode = result;
+            
+         }
+      }
+      function error(err) {
+         console.error(err);
+      }
+   </script>
+   <script>
+      var jsonData = null;
+      document.getElementById('input-excel').addEventListener('change', function(e) {
+         var reader = new FileReader();
+         reader.readAsArrayBuffer(e.target.files[0]);
+         reader.onload = function(e) {
+            var data = new Uint8Array(reader.result);
+            var workbook = XLSX.read(data, {type: 'array'});
+            var sheetName = workbook.SheetNames[0];
+            var worksheet = workbook.Sheets[sheetName];
+            jsonData = XLSX.utils.sheet_to_json(worksheet, {header: 1});
+         }
+      });
+      document.getElementById('search-button').addEventListener('click', performSearch);
+      
+      function performSearch() {
+         var name = document.getElementById('input-name').value;
+         var details = null;
+         for (var i = 0; i < jsonData.length; i++) {
+            var excelData = String(jsonData[i][0]);
+            if (excelData === name) {
+               details = jsonData[i][1];
+               break;
+            }
+         }
+         if (details) {
+            var outputDetails = document.getElementById('output-details');
+            outputDetails.innerHTML = 'Details: ' + details;
+            
+         }  
+            // Check if the first decoded barcode matches the station number
+          else {
+            alert('No details found for the given CODE');
+         }
+         
+      }
+   </script>
+   <script>
+      document.getElementById('product-search').addEventListener('click', performSearch1);
+      
+      function performSearch1() {
+         // Check if the "Scan Product" button is clicked
+         if (event.target.id === 'product-search') {
+            var name = document.getElementById('input-name').value;
+            var details1 = null;
+            for (var i = 0; i < jsonData.length; i++) {
+               var excelData = String(jsonData[i][6]);
+               if (excelData === name) {
+                  details1 = jsonData[i][0];
+                  break;
+               }
+            }
+            if (details1) {
+               var outputDetails = document.getElementById('output-details2');
+               outputDetails.innerHTML = 'Station number: ' + details1;
+
+               
+               
+               // Check if the second decoded barcode matches the station number
+               if (details1==firstDecodedBarcode) {
+                  var out=document.getElementById('alert');
+                  out.innerHTML = 'MATCH';
+               } else {
+                  var out1=document.getElementById('alert1');
+                  out1.innerHTML ='NO MATCH';
+               }
+               
+               // Display the scanned result
+
+            } else {
+               alert('No details found for the given CODE');
+            }
+         }
+      }
+   </script>
+   <script>
+      document.getElementById('restart-button').addEventListener('click', restartProcess);
+      
+      function restartProcess() {
+         // Reset variables and clear output
+         firstDecodedBarcode = null;
+         secondDecodedBarcode = null;
+         scannedResult = null;
+         document.getElementById('input-name').value = '';
+         document.getElementById('output-details').innerHTML = '';
+         document.getElementById('output-details2').innerHTML = '';
+         document.getElementById('alert').innerHTML = '';
+         document.getElementById('alert1').innerHTML = '';
+      }
+   </script>
+</body>
+</html>
